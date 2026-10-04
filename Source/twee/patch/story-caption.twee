@@ -1,0 +1,7 @@
+					<<overlayReplace "saves">>
+				<</button>>
+			</div>
+            <br>
+            <<button "<div id='bfEntryTip'>美化修正</div>">>
+                <<run window.BF?.openPicker()>>
+            <</button>>

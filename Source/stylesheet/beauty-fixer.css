@@ -1,0 +1,386 @@
+.needmeet {
+    position: absolute;
+    top: 100%;                     /* 顶边贴住 .bfTop 下沿（定位基准由下面的 .bfTop{position:relative} 提供） */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: -1;
+    opacity: 0.3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ======================================
+   美化修正 BeautyFixer 样式
+   配色全部取游戏主题变量（--000~--850 / --gold / --blue），自动跟随原版明暗主题；
+   按钮不写颜色，直接继承游戏给所有 <button> 的全局样式（1px var(--700) 边 + var(--850) 底）
+   ====================================== */
+
+/* 侧栏「美化修正」入口按钮（由 TweeReplacer 注入，见 twee/patch/story-caption.twee） */
+button:has(#bfEntryTip) {
+    overflow: hidden;
+}
+
+/* 全屏 overlay（选图面板 / 编辑器共用） */
+.bfOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: var(--850, #222);
+    color: var(--000, #ddd);
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+}
+.bfTop {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 8px 10px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--700, #444);
+    position: relative;            /* 仅作 .needmeet 水印的定位基准：水印顶部贴在顶栏下沿，宽度随顶栏换行自适应 */
+}
+.bfTitle { font-size: 1em; padding-block: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
+.bfSpacer { flex: 1; }
+
+/* 按钮只补尺寸与语义变体，颜色跟随原版 */
+.bfBtn {
+    min-height: 36px;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+.bfBtn.bfPrimary { border-color: var(--gold, gold); color: var(--gold, gold); font-weight: bold; }
+.bfBtn.bfPrimary:hover { border-color: var(--gold, gold); }   /* 主按钮 hover 保持金边（否则被原版 hover 规则改白） */
+.bfBtn.bfActive { background-color: var(--750, #444); border-color: var(--blue, #4372ff); }
+.bfBtn.bfBtnmod { min-height: 1.2em; padding: 3px 9px; }
+.bfTool:disabled { opacity: .4; }   /* 缩放模式下禁用其余工具：留在原位灰掉，而不是整排消失 */
+.bfIco { width: 1.3em; height: 1.3em; vertical-align: middle; pointer-events: none; margin-top: -4px; }   /* 按钮 Base64 图标（撤销/重做/四个工具/组合） */
+
+/* 顶栏搜索/筛选控件，风格对齐原版按钮 */
+.bfTop input, .bfTop select {
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid var(--700, #444);
+    background-color: var(--800, #333);
+    color: var(--000, #ddd);
+    font-size: 1em;
+    box-sizing: border-box;
+}
+#bfSearch { width: 140px; }
+
+/* 选图列表 */
+.bfList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.bfItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: var(--800, #333);
+    border: 1px solid var(--700, #444);
+    cursor: pointer;
+    min-height: 44px;
+}
+.bfGroupHead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 2px 2px;
+    flex-wrap: balance;
+}
+.bfHide { display: none !important; }
+.bfItem:hover { border-color: var(--000, #ddd); background-color: var(--750, #444); }   /* 与原版 button:hover 同款 */
+.bfItem > img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    flex: none;
+}
+.bfItemText { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; }
+.bfItemTags { display: flex; flex-wrap: nowrap; gap: 4px; }
+.bfTag {
+    padding: 1px 8px;
+    font-size: 0.85em;
+    border: 1px solid var(--700, #444);
+    color: var(--300, #aaa);      /* 槽位/文件部分：灰 */
+    white-space: nowrap;
+}
+.bfName { color: var(--000, #ddd); font-weight: bold; border-color: var(--300, #aaa); }   /* 衣服名称：主色加粗 */
+.bfItemPath { font-family: monospace; font-size: 0.85em; color: var(--300, #aaa); word-break: break-all; }
+.bfBadge {
+    align-self: flex-start;
+    padding: 1px 8px;
+    font-size: 0.85em;
+    background: var(--blue, #4372ff);
+    color: #fff;
+}
+.bfGroupHead > .bfBadge {
+    align-self: unset
+}
+.bfRestore { flex: none; }
+.bfEmpty { padding: 30px 10px; text-align: center; color: var(--300, #aaa); }
+
+/* 导出/导入区（默认收起，点「导出/导入」展开） */
+.bfShare {
+    padding: 10px;
+    border-bottom: 1px solid var(--700, #444);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.bfShare[hidden] {
+    display: none;
+}
+.bfShare textarea {
+    width: 100%;
+    min-height: 90px;
+    background: var(--850, #222);
+    color: var(--000, #ddd);
+    border: 1px solid var(--700, #444);
+    padding: 6px;
+    font-size: 0.85em;
+    font-family: monospace;
+    box-sizing: border-box;
+}
+.bfShareBtns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.bfGRestore { background-color: var(--gold); color: var(--850); }
+
+/* ---------- 编辑器 ---------- */
+.bfMain {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+.bfView {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    touch-action: none;           /* 禁掉浏览器手势，双指缩放自己接管 */
+    cursor: crosshair;
+}
+.bfChecker {                      /* 棋盘格底纹：单独一层（「棋盘明度」滤镜只打它，不碰画布里的图像） */
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(45deg, #202028 25%, transparent 25%, transparent 75%, #202028 75%),
+        linear-gradient(45deg, #202028 25%, #16161c 25%, #16161c 75%, #202028 75%);
+    background-size: 32px 32px;
+    background-position: 0 0, 16px 16px;
+}
+.bfStage {                       /* 单画布舞台：背景/图层/网格/镜像线/框选全画进同一张设备分辨率画布 */
+    position: absolute;          /* （不再用 CSS 定位 DOM 画布——部分内核合成器会把画布位置吸附到设备像素格点，网格与图像错位） */
+    top: 0;
+    left: 0;
+}
+.bfCursor {                       /* 画笔/橡皮光标范围圈（视图坐标） */
+    position: absolute;
+    border: 1px solid var(--gold, #d4af37);
+    border-radius: 50%;
+    pointer-events: none;
+    display: none;
+    z-index: 30;
+}
+.bfMarqueeMenu {                  /* 框选松手后的 复制/删除 选择浮层（屏幕坐标，挂编辑器内层需高过 overlay） */
+    position: fixed;
+    display: flex;
+    gap: 4px;
+    padding: 5px;
+    background: var(--850, #222);
+    color: var(--000, #ddd);
+    border: 1px solid var(--gold, #d4af37);
+    z-index: 100001;
+}
+.bfMoreWrap {                     /* 更多工具按钮（画布左上角） */
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 50;
+}
+.bfMoreMenu {                     /* 更多工具折叠菜单 */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 5px;
+    background: var(--850, #222);
+    border: 1px solid var(--gold, #d4af37);
+    z-index: 41;
+}
+.bfControls {                /* 画布左上角控制器区：各控制器自上而下排列 */
+    position: absolute;
+    top: 44px;
+    left: 6px;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+.bfPanel {                   /* 镜像调整面板 */
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 6px;
+    background: var(--850, #222);
+    border: 1px solid var(--gold, #d4af37);
+}
+#bfScaleBox {                /* 图层缩放控制器：滑杆 + 对齐档/确认取消按钮，包在同一个框里 */
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: var(--850, #222);
+    border: 1px solid var(--gold, #d4af37);
+}
+#bfScaleBox label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+#bfScaleBox input[type="range"] { width: 120px; }
+.bfPanel > label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.bfModal {                        /* 模态输入框（替代原生 prompt，iOS 可用） */
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100002;
+}
+.bfModalBox {
+    background: var(--850, #222);
+    color: var(--000, #ddd);
+    border: 1px solid var(--gold, #d4af37);
+    padding: 12px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.bfModalTitle { font-weight: bold; }
+.bfModalInput {
+    background: #1a1a1a;
+    color: #eee;
+    border: 1px solid var(--gold, #d4af37);
+    padding: 6px 8px;
+    font: inherit;
+}
+.bfModalBtns { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* 右侧工具面板 */
+.bfSide {
+    width: 280px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 10px;
+    overflow-y: auto;
+    border-left: 1px solid var(--700, #444);
+    box-sizing: border-box;
+}
+.bfRow {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.bfRow label { display: flex; align-items: center; gap: 4px; white-space: nowrap; width: stretch; }
+.bfRow label > :first-child { width: 50%; }
+.bfRow input[type="range"] { width: stretch; }
+.bfRow input[type="color"] { width: 40px; height: 32px; padding: 0; border: none; background: none; }
+.bfVal { min-width: 3.5em; color: var(--300, #aaa); font-size: 0.9em; }
+.bfPos { flex-wrap: nowrap; gap: 4px; }   /* X/Y 微调行：强制同行（换行后 Y 组易被误点成 X 组） */
+.bfPos .bfVal { min-width: 2.5em; text-align: center; }
+
+.bfLayers {                        /* 图层条：水平布局，固定在画布区底部（宽度=画布区，不占右侧工具面板） */
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 5px 6px;
+    background: var(--850, #222);
+    border-top: 1px solid var(--700, #444);
+    scrollbar-width: thin;              /* 细滚动条（Firefox） */
+    user-select: none;                  /* 拖片排序时不选中文字 */
+}
+.bfLayers::-webkit-scrollbar { height: 6px; }   /* 细滚动条（Chromium）——默认太高占地方 */
+.bfLayers::-webkit-scrollbar-thumb { background: var(--700, #444); }
+.bfLayers::-webkit-scrollbar-track { background: transparent; }
+.bfLayerRow {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    background: var(--800, #333);
+    border: 1px solid var(--700, #444);
+    cursor: pointer;
+    min-height: 34px;
+}
+.bfLayerRow.bfActive { border-color: var(--blue, #4372ff); background: var(--750, #444); }
+.bfLayerAdd { justify-content: center; padding: 5px 12px; font-weight: bold; color: var(--300, #aaa); }   /* 队首 + 新建图层片 */
+.bfDel { color: var(--500, #888); }
+.bfEye { background: none; border: none; font-size: 1em; padding: 0 2px; min-height: 0; }
+.bfLayerName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bfLayerRow.bfEmptyLayer { background: repeating-linear-gradient(45deg, var(--800, #333) 0 6px, var(--750, #444) 6px 12px); }   /* 空图层片：斜向灰条纹（选中也不消失，故与 .bfActive 同权重且写在后面） */
+
+.bfTip { color: var(--300, #aaa); font-size: 0.85em; line-height: 1.5; }
+
+/* 提示条 */
+.bfToast {
+    position: fixed;
+    left: 50%;
+    bottom: 60px;
+    transform: translateX(-50%);
+    z-index: 100000;
+    background: var(--850, #222);
+    color: var(--000, #ddd);
+    border: 1px solid var(--gold, gold);
+    padding: 8px 18px;
+    pointer-events: none;
+}
+
+/* ---------- 手机端 ---------- */
+@media (max-width: 720px) {
+    .bfMain { flex-direction: column; }
+    .bfView { flex: 1; min-height: 0; }
+    .bfSide {
+        width: 100%;
+        max-height: 42vh;
+        border-left: none;
+        border-top: 1px solid var(--700, #444);
+        padding: 8px;
+        gap: 6px;
+        transition: max-height .3s ease;   /* 工具区收起/展开的滑动动画（只动 max-height，内容随之被裁切） */
+    }
+    .bfLayerRow { padding: 0px 8px !important; min-height: 30px !important; }              /* 手机端图层条：压缩上下留白（默认 5px 在窄屏很占地方） */
+    .bfSide.bfCollapsed { max-height: 20vh; }    /* 工具区收起态（面板滚到顶再下滑触发，上滑恢复） */
+    .bfGroupHead > .bfSpacer { min-width: stretch; }
+    .bfBtn { min-height: 40px; padding: 4px 14px; }
+    .bfRow input[type="range"] { width: 20em; }
+    .bfTitle { max-width: 70vw; }
+    #bfSearch { flex: 1; }
+}

@@ -1,0 +1,29 @@
+{
+    "name": "美化修正",
+    "version": "0.7.46",
+    "styleFileList": [
+        "stylesheet/beauty-fixer.css"
+    ],
+    "scriptFileList": [
+        "javascript/beauty-fixer.js"
+    ],
+    "tweeFileList": [],
+    "imgFileList": [],
+    "addonPlugin": [
+        {
+            "modName": "TweeReplacer",
+            "addonName": "TweeReplacerAddon",
+            "modVersion": "^1.0.0",
+            "params": [
+                {
+                    "tip": "侧栏「美化修正」入口",
+                    "passage": "StoryCaption",
+                    "findRegex": "<<overlayReplace \\\"saves\\\">>\\r?\\n\\s*<</button>>\\r?\\n\\s*</div>",
+                    "regexFlag": "g",
+                    "replaceFile": "twee/patch/story-caption.twee"
+                }
+            ]
+        }
+    ],
+    "dependenceInfo": []
+}

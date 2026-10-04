@@ -891,9 +891,7 @@ BF.openEditor = function(src) {
     });
     const layerIn = panel.querySelector("#bfLayerIn");
     panel.querySelector("#bfLayerImport").addEventListener("click", () => layerIn.click());
-    layerIn.addEventListener("change", () => {
-        const f = layerIn.files[0];
-        layerIn.value = "";
+    const importFile = (f, dx = 0, dy = 0) => {   // 按钮选图与拖拽入画布共用；dx/dy = 拖放松手位置（按钮导入不传=0,0 原位）
         if (!f) return;
         // 不能再用 URL.createObjectURL：页面 CSP 是 img-src 'self' data:，blob: 会被拦下（报 CSP 违规且图读不出）。
         // 改读成 data: URL——同属白名单，且 data: 图片不污染画布，导入的图之后还能再导出、能进修正数据。
@@ -904,17 +902,19 @@ BF.openEditor = function(src) {
             img.onload = () => {
                 const ed = BF.ed;
                 if (!ed) return;
-                const c = document.createElement("canvas");
-                c.width = ed.fileW; c.height = ed.fileH;   // 铺满文件尺寸：和原图共用同一坐标系，位置天生对齐
-                const cc = c.getContext("2d");
-                cc.imageSmoothingEnabled = false;
                 const k = Math.min(1, ed.fileW / img.naturalWidth, ed.fileH / img.naturalHeight);   // 图比画布大：等比缩小到放得下（不然超出部分被裁掉，画布看着是空的）
                 const iw = Math.round(img.naturalWidth * k), ih = Math.round(img.naturalHeight * k);
+                const c = document.createElement("canvas");
+                c.width = iw; c.height = ih;   // 画布贴着图，不铺满文件：导入层是冻结块、边框按整块画布算，铺满文件的话虚线框会大过整张图（位置仍由 x/y=0 对齐，坐标系不变）
+                const cc = c.getContext("2d");
+                cc.imageSmoothingEnabled = false;
                 cc.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, 0, 0, iw, ih);
-                const NL = { canvas: c, ctx: cc, name: f.name, visible: true, x: 0, y: 0, s: 1 };
+                const NL = { canvas: c, ctx: cc, name: f.name, visible: true, x: dx, y: dy, s: 1, noExport: true,
+                             piece: { x: 0, y: 0, s: 1, w: iw, h: ih, ox: 0, oy: 0, sx: 0, sy: 0, sw: 0, sh: 0, ink: 1,
+                                      inkURL: c.toDataURL() } };   // 导入层=自带配方的冻结块：inkURL 存缩放后的图（和画布同尺寸，块重演/保存/框选引用才不会只取到原图一角）；保存重开不再糊成一张
                 ed.layers.push(NL);
                 ed.active = ed.layers.length - 1;
-                BF.pushUndo([]).push({ L: NL, inList: false, x: 0, y: 0, s: 1 });   // 撤销 = 整层移除
+                BF.pushUndo([]).push({ L: NL, inList: false, x: dx, y: dy, s: 1 });   // 撤销 = 整层移除
                 ed.tool = "move";
                 BF.syncLayers(); BF.syncTools(); BF.applyLayer(NL);
                 BF.toast("已导入图层：" + f.name + "（拖动/缩放摆位置）");
@@ -923,7 +923,33 @@ BF.openEditor = function(src) {
             img.src = fr.result;
         };
         fr.readAsDataURL(f);
-    });
+    };
+    layerIn.addEventListener("change", () => { const f = layerIn.files[0]; layerIn.value = ""; importFile(f); });
+    // 拖拽图片文件进画布 = 导入图层。监听挂 window：捕获阶段最早放行，冒泡阶段再放行一次——event 回到 window 时设的放置效果才是最终生效值，中途被别的脚本改成 none 会被这一步压回来
+    BF._bfDragZone = e => {   // 落点是否在画布可视区内（编辑器开着才有意义）
+        const ed = BF.ed;
+        if (!ed?.viewEl) return null;
+        const r = ed.viewEl.getBoundingClientRect();
+        return e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom ? ed : null;
+    };
+    const bfDragTake = e => {   // dragenter / dragover 都要放行（只放行 dragover，浏览器不认这是放置区，松手不会给 drop）；同时把放置效果设成「复制」，免得别处把它设成 none 而显示禁用
+        if (!e.dataTransfer?.items?.length || !BF._bfDragZone(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+    };
+    window.addEventListener("dragenter", bfDragTake, true);
+    window.addEventListener("dragover", bfDragTake, true);
+    // 冒泡阶段再放行一次：事件走完整个路径最后回到 window，此刻设的 dropEffect 才是最终生效值，能压掉中途把效果改成 none 的脚本
+    window.addEventListener("dragover", bfDragTake);
+    window.addEventListener("drop", e => {
+        if (!BF._bfDragZone(e)) return;
+        const imgs = [...(e.dataTransfer?.files || [])].filter(f => f.type.startsWith("image/"));   // FileList 可安全展开
+        if (!imgs.length) return;
+        e.preventDefault(); e.stopPropagation();
+        const ed = BF.ed, r = ed.viewEl.getBoundingClientRect(), v = ed.view;   // 松手位置 → 画布纹素坐标（导入层左上角钉在鼠标处）
+        const px = Math.round((e.clientX - r.left - v.x) / v.z), py = Math.round((e.clientY - r.top - v.y) / v.z);
+        imgs.forEach(f => importFile(f, px, py));   // 一次可拖多张（多张全落在同一点，自己拖开即可）
+    }, true);
 
     // 背景层（离屏画布，只显示用，不参与导出）+ 初始快照
     const bg = document.createElement("canvas");
@@ -1119,6 +1145,13 @@ BF.drawStage = function() {   // 实际绘制，每帧最多一次（排队期�
         else ctx.drawImage(L.canvas, L.x, L.y, L.canvas.width * L.s, L.canvas.height * L.s);
     }
     ctx.globalAlpha = 1;
+    // 画布外蒙半透明黑：图层可以出界照常显示（蒙上后仍隐约可见），只是能一眼分清画布边界在哪里
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.rect(v.x * d, v.y * d, ed.fileW * v.z * d, ed.fileH * v.z * d);
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fill("evenodd");   // 双路径奇偶填充：只有画布矩形以外的区域被罩黑，框内不受影响
     // 网格/镜像线/框选：纹素坐标换算到设备像素后直接画，与图层同一原点、同一光栅化——严格同格
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const s = v.z * d, ox = v.x * d, oy = v.y * d;   // 静止时为整数设备像素；双指缩放跟手中可为小数（松手吸附）
@@ -1901,6 +1934,11 @@ BF.renderPiece = function(pc, orig, eraseImg, inkImg, maskC) {
         cc.globalCompositeOperation = "source-over";
     }
     const inkSrc = pc.inkImg ?? (pc.ink ? inkImg : null);   // 冻结的笔迹窗优先（复制=建块时刻定格）；旧数据无 inkURL 回退实时合成
+    if (!pc.inkImg && pc.inkURL) {   // 嵌套引用里的冻结图（如导入块被框进别的块）无预解码：惰性解码，完成后全量补刷——回退到总笔迹图会画错区域
+        pc.inkImg = new Image();
+        pc.inkImg.onload = () => BF.refresh();
+        pc.inkImg.src = pc.inkURL;
+    }
     const drawInk = () => { if (inkSrc && (inkSrc.complete === undefined || inkSrc.complete)) cc.drawImage(inkSrc, pc.ox, pc.oy, pc.w, pc.h, 0, 0, c.width, c.height); };
     if (!pc.inkTop) drawInk();   // 默认块内层序：笔迹在引用块之下
     let mk = maskC || pc.maskImg;

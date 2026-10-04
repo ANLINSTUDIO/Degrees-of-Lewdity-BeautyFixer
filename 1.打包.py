@@ -34,6 +34,29 @@ def minify_js(file_path):
         print(f"警告: 压缩出错，按原样打包: {e}")
         return None
 
+def minify_css(file_path):
+    """压缩 CSS：去注释去空白（保留 data: URI 内的空格，不能动）。纯文本处理，无外部依赖；失败返回 None 退回原文件"""
+    try:
+        import re
+        css = Path(file_path).read_text(encoding="utf-8")
+        # 先摘出 url(...) 与引号字符串里的内容原样保护（data URI 里的空格/分号不可动）
+        tokens = []
+        def stash(m):
+            tokens.append(m.group(0))
+            return f"\x00{len(tokens) - 1}\x00"
+        css = re.sub(r"url\([^)]*\)|\"[^\"]*\"|'[^']*'", stash, css)
+        css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)          # 块注释
+        css = re.sub(r"\s+", " ", css)                            # 连续空白压成单空格
+        css = re.sub(r"\s*([{}:;,>~+])\s*", r"\1", css)           # 符号两侧空格去掉
+        css = re.sub(r";}", "}", css)                             # 末尾分号
+        css = css.strip()
+        css = re.sub(r"\x00(\d+)\x00", lambda m: tokens[int(m.group(1))], css)   # 还原被保护的串
+        print(f"已压缩: {Path(file_path).name}  {len(Path(file_path).read_text(encoding='utf-8'))} -> {len(css)} 字符")
+        return css
+    except Exception as e:
+        print(f"警告: CSS 压缩出错，按原样打包: {e}")
+        return None
+
 def collect_images(photo_dir, base_dir):
     """递归收集目录下所有文件的相对路径（相对于 base_dir），目录不存在则返回空"""
     img_files = []
@@ -87,6 +110,12 @@ def create_zip(zip_name, base_dir):
                         mini = minify_js(file_path)
                         if mini is not None:
                             zipf.writestr(arcname, mini)   # 压缩后的 JS 写进 zip；源目录不动
+                            print(f"已添加(压缩): {arcname}")
+                            continue
+                    elif file_path.suffix.lower() == ".css":
+                        mini = minify_css(file_path)
+                        if mini is not None:
+                            zipf.writestr(arcname, mini)   # 压缩后的 CSS 写进 zip；源目录不动
                             print(f"已添加(压缩): {arcname}")
                             continue
                     zipf.write(file_path, arcname)

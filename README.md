@@ -4,6 +4,9 @@
 
 一个 Degrees of Lewdity 的 Mod Loader 模组：在游戏内打开图像编辑器，直接修正服装 / 五官 / 头发的图——移动、缩放、画笔、橡皮、分割、镜像、复制与合并图层，保存即生效，重进游戏依然保留，并可导出修正码分享给别人。
 
+<img width="756" height="388" alt="image" src="https://github.com/user-attachments/assets/d1bd11ad-f13c-41da-9574-be06c5a2ab5e" />
+
+
 > ## ⬇️ 下载与安装
 > - 请前往 [**Releases（发行版）**](../../releases) 下载最新的 `BeautyFixer-vX.X.X.zip`。
 > - **不要下载仓库源码目录**：源码里的 JS 未经过打包压缩，直接装进 Mod Loader 是可以跑，但发行版才是经过验证的稳定版本。

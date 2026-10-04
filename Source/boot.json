@@ -1,6 +1,6 @@
 {
     "name": "美化修正",
-    "version": "0.7.46",
+    "version": "1.0.0",
     "styleFileList": [
         "stylesheet/beauty-fixer.css"
     ],

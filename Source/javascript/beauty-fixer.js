@@ -45,16 +45,16 @@ BF.dataURLToBlob = function(dataURL) {
 // 统一的落盘出口。接口按两端实情核定：安卓 APK 的 index.html 把每一处 saveAs(...) 都换成了
 // cordova.plugins.saveDialog.saveFile(blob, 名字)（APK 里装了 cordova-plugin-save-dialog，直接落进系统
 // 「保存到文件」），它必须排第一——APK 里的 window.saveAs 虽然存在（FileSaver 挂的），点了不弹框也不报错，
-// 排在前面就会“假装成功”。电脑端改用 showSaveFilePicker：游戏从 file:// 打开，FileSaver 的 <a download>
-// 会被 Chrome 当成打开页面、把游戏界面冲掉。
+// 排在前面就会“假装成功”。电脑端 FileSaver 的 saveAs 直落下载目录（blob: 同源，download 属性有效）；
+// showSaveFilePicker 排其后兜底。
 BF.saveBlob = async function(blob, name) {
     const savers = [
         window.cordova?.plugins?.saveDialog?.saveFile,   // 安卓 APK 专用：游戏「另存为」用的就是它，返回 Promise
-        window.showSaveFilePicker && (async (blob, name) => {   // 电脑端：调起系统「另存为」直接写盘（file:// 下 <a download> 会被 Chrome 当成打开页面）
+        window.saveAs,                                   // 电脑端：FileSaver 直落下载目录，无需选择
+        window.showSaveFilePicker && (async (blob, name) => {   // 兜底：调起系统「另存为」直接写盘
             const w = await (await window.showSaveFilePicker({ suggestedName: name })).createWritable();
             await w.write(blob); await w.close();
         }),
-        window.saveAs,                                   // 兜底：FileSaver 的 saveAs
     ].filter(f => typeof f === "function");
     for (const f of savers) {
         try {
@@ -2723,7 +2723,7 @@ BF.importCode = async function(text) {
     text = (text || "").trim();
     let rows;
     try { rows = await BF.decCode(text); }
-    catch (e) { BF.toast("不是有效的修正码"); return; }
+    catch (e) { console.error("[BF] 导入解码失败", e); BF.toast("不是有效的修正码" + (e && e.message ? "：" + e.message : "")); return; }
     if (!Array.isArray(rows) || !rows.length) { BF.toast("修正码里没有数据"); return; }
     rows.forEach(row => {
         if (row.src?.startsWith("group:")) {   // 组修正行 → 组表

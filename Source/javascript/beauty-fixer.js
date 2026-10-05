@@ -402,6 +402,7 @@ BF.openPicker = function() {
                     <option value="time" ${BF.pick.sort === "time" ? "selected" : ""}>按修正时间</option>
                 </select>
                 <span class="bfSpacer"></span>
+                <button class="bfBtn" id="bfPickerHelp" title="打开使用教程（Wiki）">教程</button>
                 <button class="bfBtn" id="bfDoExport">导出</button>
                 <button class="bfBtn" id="bfDoImport">导入</button>
                 <button class="bfBtn bfClose">关闭</button>
@@ -427,6 +428,11 @@ BF.openPicker = function() {
         </div>`);
     document.body.appendChild(panel);
     panel.querySelector(".bfClose").addEventListener("click", BF.closeAll);
+    panel.querySelector("#bfPickerHelp").addEventListener("click", () => window.open("https://github.com/ANLINSTUDIO/Degrees-of-Lewdity-BeautyFixer/blob/v1.0.0/Wiki/start.md", "_blank"));   // 使用教程（Wiki）
+    if (!localStorage.getItem("BF_seen_v1")) {   // 首次打开面板：弹一次教程指引（点过任一按钮就不再弹；编辑器里的首次弹窗共用同一标记）
+        localStorage.setItem("BF_seen_v1", "1");
+        BF.confirm("第一次用美化修正器？要打开使用教程吗？（之后可随时点顶部「教程」按钮再看）", () => window.open("https://github.com/ANLINSTUDIO/Degrees-of-Lewdity-BeautyFixer/blob/v1.0.0/Wiki/start.md", "_blank"));
+    }
     panel.querySelector("#bfSearch").addEventListener("input", e => { BF.pick.q = e.target.value; BF.updateList(); });
     panel.querySelector("#bfSlot").addEventListener("change", e => { BF.pick.slot = e.target.value; BF.updateList(); });
     panel.querySelector("#bfSt").addEventListener("change", e => { BF.pick.st = e.target.value; BF.updateList(); });
@@ -646,6 +652,7 @@ BF.openEditor = function(src) {
                     <button class="bfBtn" id="bfRedo" title="重做"><img class="bfIco" src="${BF.ICONS.redo}" alt="重做"></button>
                 </div>
                 <button class="bfBtn" id="bfRestore">还原</button>
+                <button class="bfBtn" id="bfHelp" title="打开使用教程（Wiki）">教程</button>
                 <button class="bfBtn bfPrimary" id="bfSave">保存并生效</button>
                 <button class="bfBtn bfClose">关闭</button>
             </div>
@@ -741,6 +748,7 @@ BF.openEditor = function(src) {
     panel.querySelector("#bfUndo").addEventListener("click", BF.undo);
     panel.querySelector("#bfRedo").addEventListener("click", BF.redo);
     panel.querySelector("#bfSave").addEventListener("click", BF.saveFix);
+    panel.querySelector("#bfHelp").addEventListener("click", () => window.open("https://github.com/ANLINSTUDIO/Degrees-of-Lewdity-BeautyFixer/blob/v1.0.0/Wiki/start.md", "_blank"));   // 使用教程（Wiki），新开页不打断编辑
     panel.querySelector("#bfRestore").addEventListener("click", () => {   // 组合编辑激活配件时还原该配件，否则还原主文件
         const s = BF.ed.layers[BF.ed.active].gSrc || src;
         BF.confirm(`把「${BF.shortName(s)}」还原为原版？该文件的修正会被清除。`, () => BF.restoreFix(s));
